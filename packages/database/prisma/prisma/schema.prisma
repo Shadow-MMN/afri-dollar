@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and authorization
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phoneNumber   String?   @unique
+  walletAddress String?   @unique
+  firstName     String?
+  lastName      String?
+  isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  business      Business?
+  wallets       Wallet[]
+  transactions  Transaction[]
+  kycRecords    KYCRecord[]
+
+  @@index([email])
+  @@index([walletAddress])
+}
+
+// Business model for enterprise customers
+model Business {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  businessName     String
+  businessType     String
+  registrationNumber String?
+  taxId           String?
+  
+  country         String
+  region          String?
+  city            String?
+  address         String?
+  
+  isKycVerified   Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([businessName])
+}
+
+// Wallet model for Stellar wallets
+model Wallet {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  publicKey       String   @unique
+  secretKeyEncrypted String
+  
+  walletType      String   // 'business', 'treasury', 'payroll'
+  network         String   @default('testnet') // 'testnet', 'mainnet'
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  balances        WalletBalance[]
+  transactions    Transaction[]
+
+  @@index([userId])
+  @@index([publicKey])
+}
+
+// Wallet balance tracking for different assets
+model WalletBalance {
+  id          String   @id @default(cuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  assetCode   String   // 'USDC', 'NGN', 'KES', etc.
+  assetIssuer String?  // Stellar asset issuer
+  balance     String   // Stored as string to handle precision
+  updatedAt   DateTime @updatedAt
+
+  @@unique([walletId, assetCode, assetIssuer])
+  @@index([walletId])
+}
+
+// Transaction model for all transactions
+model Transaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  type            String   // 'deposit', 'withdrawal', 'transfer', 'exchange', 'payroll'
+  status          String   @default('pending') // 'pending', 'completed', 'failed', 'cancelled'
+  
+  amount          String
+  assetCode       String
+  assetIssuer     String?
+  
+  fromAddress     String?
+  toAddress       String?
+  stellarTxId     String?  @unique
+  
+  metadata        Json?
+  errorMessage    String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([status])
+  @@index([stellarTxId])
+}
+
+// KYC records for compliance
+model KYCRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider    String   // 'onfido', 'sumsub', etc.
+  providerId  String?  // External provider's ID
+  
+  status      String   @default('pending') // 'pending', 'approved', 'rejected', 'review'
+  
+  documentType String?
+  documentNumber String?
+  
+  metadata    Json?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Exchange rates for FX operations
+model ExchangeRate {
+  id          String   @id @default(cuid())
+  
+  fromAsset   String   // 'USDC'
+  toAsset     String   // 'NGN'
+  
+  rate        String   // Stored as string for precision
+  source      String   // 'internal', 'external', 'manual'
+  
+  isActive    Boolean  @default(true)
+  validFrom   DateTime @default(now())
+  validUntil  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([fromAsset, toAsset, validFrom])
+  @@index([fromAsset, toAsset])
+  @@index([isActive])
+}
+
+// Audit log for compliance and security
+model AuditLog {
+  id          String   @id @default(cuid())
+  
+  userId      String?
+  action      String   // 'login', 'wallet_create', 'transaction_init', etc.
+  resource    String   // 'user', 'wallet', 'transaction', etc.
+  resourceId  String?
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  metadata    Json?
+  success     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

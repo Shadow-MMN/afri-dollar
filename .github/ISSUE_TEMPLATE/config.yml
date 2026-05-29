@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion Forum
+    url: https://github.com/afridollar/afri-dollar/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://docs.afridollar.com
+    about: Check our documentation for guides and API references
+  - name: 🔒 Security Issue
+    url: https://github.com/afridollar/afri-dollar/security/advisories/new
+    about: Report a security vulnerability privately

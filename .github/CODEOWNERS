@@ -1,0 +1,34 @@
+# Code Owners for AfriDollar
+
+# Default owners for everything in the repo
+* @eleazar-musa @ebube-onuora @jethro-adamu
+
+# Frontend
+/apps/frontend/ @jethro-adamu @eleazar-musa
+
+# Backend
+/apps/backend/ @eleazar-musa @jethro-adamu
+
+# Stellar Integration
+/packages/stellar-sdk/ @eleazar-musa
+
+# Database & Prisma
+/packages/database/ @eleazar-musa @jethro-adamu
+
+# Shared packages
+/packages/shared/ @eleazar-musa @jethro-adamu
+
+# Documentation
+/docs/ @ebube-onuora @eleazar-musa
+*.md @ebube-onuora
+
+# CI/CD
+/.github/ @eleazar-musa @jethro-adamu
+
+# Configuration files
+*.json @eleazar-musa
+*.yml @eleazar-musa
+*.yaml @eleazar-musa
+
+# Security
+/SECURITY.md @eleazar-musa @jethro-adamu
