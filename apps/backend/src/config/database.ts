@@ -1,3 +1,3 @@
-import prisma from '@afri-dollar/database';
+import { prisma } from '@afri-dollar/database';
 
 export default prisma;
