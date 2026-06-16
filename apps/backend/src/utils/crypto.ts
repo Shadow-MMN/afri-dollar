@@ -5,7 +5,7 @@ const IV_LENGTH = 12;
 
 /**
  * Retrieves the 32-byte encryption key from the environment.
- * Falls back to a default key if not configured (useful for development/testing).
+ * Throws an error if ENCRYPTION_KEY is not configured.
  */
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_KEY;

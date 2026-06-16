@@ -7,6 +7,7 @@ import {
   TransactionBuilder,
   Asset,
   Memo,
+  StrKey,
 } from '@stellar/stellar-sdk';
 
 import prisma from '../config/database';
@@ -169,6 +170,36 @@ export const PayrollService = {
     }
     if (batch.status !== 'pending') {
       throw new Error('Cannot add items to a batch that is not pending approval');
+    }
+
+    // Validate recipientAddress is a valid Stellar address format
+    if (!itemData.recipientAddress || !StrKey.isValidEd25519PublicKey(itemData.recipientAddress)) {
+      throw new Error('Invalid Stellar recipient address');
+    }
+
+    // Validate amount is a positive numeric string
+    const amountNum = parseFloat(itemData.amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      throw new Error('Amount must be a positive number');
+    }
+
+    // Validate assetCode is a non-empty alphanumeric string of 1 to 12 characters
+    if (!itemData.assetCode || !/^[a-zA-Z0-9]{1,12}$/.test(itemData.assetCode)) {
+      throw new Error('Asset code must be a non-empty alphanumeric string of 1 to 12 characters');
+    }
+
+    // Validate assetIssuer rules based on whether the asset is XLM (native) or not
+    if (itemData.assetCode !== 'XLM') {
+      if (!itemData.assetIssuer) {
+        throw new Error('Asset issuer is required for non-XLM assets');
+      }
+      if (!StrKey.isValidEd25519PublicKey(itemData.assetIssuer)) {
+        throw new Error('Invalid Stellar asset issuer address');
+      }
+    } else {
+      if (itemData.assetIssuer) {
+        throw new Error('Asset issuer must not be provided for XLM (native asset)');
+      }
     }
 
     const item = await prisma.payrollItem.create({

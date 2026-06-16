@@ -1,5 +1,4 @@
 /* eslint-disable */
-process.env.ENCRYPTION_KEY = 'test-encryption-key-32-octets-long-for-jest';
 import { Account, Keypair } from '@stellar/stellar-sdk';
 
 import prisma from '../../config/database';
@@ -70,8 +69,24 @@ describe('PayrollService', () => {
   const testKeypair = Keypair.random();
   const mockPublicKey = testKeypair.publicKey();
   const mockSecretKey = testKeypair.secret();
-  const mockSecretEncrypted = encrypt(mockSecretKey);
+  let mockSecretEncrypted: string;
   const mockAssetIssuer = Keypair.random().publicKey();
+
+  let originalEncryptionKey: string | undefined;
+
+  beforeAll(() => {
+    originalEncryptionKey = process.env.ENCRYPTION_KEY;
+    process.env.ENCRYPTION_KEY = 'test-encryption-key-32-octets-long-for-jest';
+    mockSecretEncrypted = encrypt(mockSecretKey);
+  });
+
+  afterAll(() => {
+    if (originalEncryptionKey === undefined) {
+      delete process.env.ENCRYPTION_KEY;
+    } else {
+      process.env.ENCRYPTION_KEY = originalEncryptionKey;
+    }
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -135,27 +150,29 @@ describe('PayrollService', () => {
       const mockItem = {
         id: 'item-1',
         payrollBatchId: 'batch-123',
-        recipientAddress: 'GBX...',
+        recipientAddress: mockPublicKey,
         amount: '100.00',
         assetCode: 'USDC',
+        assetIssuer: mockAssetIssuer,
         status: 'pending',
       };
       mockPayrollItemCreate.mockResolvedValue(mockItem);
 
       const result = await PayrollService.addPayrollItem('batch-123', {
-        recipientAddress: 'GBX...',
+        recipientAddress: mockPublicKey,
         amount: '100.00',
         assetCode: 'USDC',
+        assetIssuer: mockAssetIssuer,
       });
 
       expect(mockPayrollBatchFindUnique).toHaveBeenCalledWith({ where: { id: 'batch-123' } });
       expect(mockPayrollItemCreate).toHaveBeenCalledWith({
         data: {
           payrollBatchId: 'batch-123',
-          recipientAddress: 'GBX...',
+          recipientAddress: mockPublicKey,
           amount: '100.00',
           assetCode: 'USDC',
-          assetIssuer: null,
+          assetIssuer: mockAssetIssuer,
           memo: null,
           status: 'pending',
         },
@@ -168,9 +185,10 @@ describe('PayrollService', () => {
 
       await expect(
         PayrollService.addPayrollItem('invalid-batch', {
-          recipientAddress: 'GBX...',
+          recipientAddress: mockPublicKey,
           amount: '100.00',
           assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
         })
       ).rejects.toThrow('Payroll batch not found');
     });
@@ -181,11 +199,99 @@ describe('PayrollService', () => {
 
       await expect(
         PayrollService.addPayrollItem('batch-123', {
-          recipientAddress: 'GBX...',
+          recipientAddress: mockPublicKey,
+          amount: '100.00',
+          assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Cannot add items to a batch that is not pending approval');
+    });
+
+    it('should throw an error if recipientAddress is invalid', async () => {
+      const mockBatch = { id: 'batch-123', status: 'pending' };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: 'invalid-address',
+          amount: '100.00',
+          assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Invalid Stellar recipient address');
+    });
+
+    it('should throw an error if amount is zero or negative', async () => {
+      const mockBatch = { id: 'batch-123', status: 'pending' };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
+          amount: '-50.00',
+          assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Amount must be a positive number');
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
+          amount: '0.00',
+          assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Amount must be a positive number');
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
+          amount: 'invalid-num',
+          assetCode: 'USDC',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Amount must be a positive number');
+    });
+
+    it('should throw an error if assetCode is invalid', async () => {
+      const mockBatch = { id: 'batch-123', status: 'pending' };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
+          amount: '100.00',
+          assetCode: 'INVALIDASSETCODE12345', // too long
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Asset code must be a non-empty alphanumeric string of 1 to 12 characters');
+    });
+
+    it('should throw an error if assetIssuer is missing for non-XLM asset', async () => {
+      const mockBatch = { id: 'batch-123', status: 'pending' };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
           amount: '100.00',
           assetCode: 'USDC',
         })
-      ).rejects.toThrow('Cannot add items to a batch that is not pending approval');
+      ).rejects.toThrow('Asset issuer is required for non-XLM assets');
+    });
+
+    it('should throw an error if assetIssuer is provided for XLM (native)', async () => {
+      const mockBatch = { id: 'batch-123', status: 'pending' };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+
+      await expect(
+        PayrollService.addPayrollItem('batch-123', {
+          recipientAddress: mockPublicKey,
+          amount: '100.00',
+          assetCode: 'XLM',
+          assetIssuer: mockAssetIssuer,
+        })
+      ).rejects.toThrow('Asset issuer must not be provided for XLM (native asset)');
     });
   });
 
@@ -227,36 +333,40 @@ describe('PayrollService', () => {
   });
 
   describe('processPayrollBatch', () => {
-    const mockBatch = {
-      id: 'batch-123',
-      name: 'June Payroll',
-      status: 'approved',
-      wallet: {
-        id: mockWalletId,
-        publicKey: mockPublicKey,
-        secretKeyEncrypted: mockSecretEncrypted,
-      },
-      items: [
-        {
-          id: 'item-1',
-          recipientAddress: mockPublicKey,
-          amount: '50.00',
-          assetCode: 'USDC',
-          assetIssuer: mockAssetIssuer,
-          memo: 'salary1',
-          status: 'pending',
+    let mockBatch: any;
+
+    beforeEach(() => {
+      mockBatch = {
+        id: 'batch-123',
+        name: 'June Payroll',
+        status: 'approved',
+        wallet: {
+          id: mockWalletId,
+          publicKey: mockPublicKey,
+          secretKeyEncrypted: mockSecretEncrypted,
         },
-        {
-          id: 'item-2',
-          recipientAddress: mockPublicKey,
-          amount: '75.00',
-          assetCode: 'USDC',
-          assetIssuer: mockAssetIssuer,
-          memo: 'salary1',
-          status: 'pending',
-        },
-      ],
-    };
+        items: [
+          {
+            id: 'item-1',
+            recipientAddress: mockPublicKey,
+            amount: '50.00',
+            assetCode: 'USDC',
+            assetIssuer: mockAssetIssuer,
+            memo: 'salary1',
+            status: 'pending',
+          },
+          {
+            id: 'item-2',
+            recipientAddress: mockPublicKey,
+            amount: '75.00',
+            assetCode: 'USDC',
+            assetIssuer: mockAssetIssuer,
+            memo: 'salary1',
+            status: 'pending',
+          },
+        ],
+      };
+    });
 
     it('should successfully submit batched transactions', async () => {
       mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
@@ -264,7 +374,7 @@ describe('PayrollService', () => {
       mockPayrollBatchUpdate.mockResolvedValue({
         ...mockBatch,
         status: 'completed',
-        items: mockBatch.items.map((i) => ({
+        items: mockBatch.items.map((i: any) => ({
           ...i,
           status: 'completed',
           stellarTxId: 'tx-hash-123',
@@ -347,6 +457,44 @@ describe('PayrollService', () => {
       expect(result.failed).toBe(1);
       expect(result.items[0].status).toBe('completed');
       expect(result.items[1].status).toBe('failed');
+    });
+
+    it('should throw an error if the batch is already being processed', async () => {
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatch);
+      mockPayrollBatchUpdateMany.mockResolvedValue({ count: 0 }); // simulating batch already processing
+
+      await expect(PayrollService.processPayrollBatch('batch-123', 'user-1')).rejects.toThrow(
+        'Batch is already being processed'
+      );
+    });
+
+    it('should revert batch status to approved and log failure on decryption error', async () => {
+      const mockBatchWithInvalidSecret = {
+        ...mockBatch,
+        wallet: {
+          ...mockBatch.wallet,
+          secretKeyEncrypted: 'invalid-encrypted-key-format', // will cause decrypt() to fail
+        },
+      };
+      mockPayrollBatchFindUnique.mockResolvedValue(mockBatchWithInvalidSecret);
+      mockPayrollBatchUpdateMany.mockResolvedValue({ count: 1 });
+
+      await expect(PayrollService.processPayrollBatch('batch-123', 'user-1')).rejects.toThrow(
+        'Wallet decryption failure'
+      );
+
+      expect(mockPayrollBatchUpdate).toHaveBeenCalledWith({
+        where: { id: 'batch-123' },
+        data: { status: 'approved' },
+      });
+      expect(mockAuditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: 'payroll_batch_process_failed',
+            success: false,
+          }),
+        })
+      );
     });
   });
 });
