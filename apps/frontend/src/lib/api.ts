@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { getAuthToken } from './auth';
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   headers: {
@@ -18,8 +20,7 @@ if (typeof window !== 'undefined') {
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const token = localStorage.getItem('auth_token');
+    const token = getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
