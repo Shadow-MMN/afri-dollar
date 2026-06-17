@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 
 import { useFX } from '../../hooks/useFX';
 
+/**
+ * FXCalculator component allows users to input USD amounts and see the conversion
+ * to NGN in real-time based on the custom hook `useFX` rates.
+ */
 export function FXCalculator(): JSX.Element {
   const [usdAmount, setUsdAmount] = useState<number>(1);
   const { rates, convert } = useFX();

@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * PayrollBatchList component renders a tabular list of recent and pending
+ * payroll batches for corporate employees, ensuring screen-reader accessibility.
+ */
 export function PayrollBatchList(): JSX.Element {
   const batches = [
     { id: '1', date: '2026-06-15', amount: 45000, status: 'Completed' },

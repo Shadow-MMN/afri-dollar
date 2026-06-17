@@ -9,6 +9,13 @@ interface WalletState {
   error: string | null;
 }
 
+/**
+ * Custom hook to load and manage Stellar account state (address, balances, loading, and error).
+ * It uses loadStellarAccount underneath to communicate with the network.
+ *
+ * @param publicKey Optional Stellar account public key address string
+ * @returns WalletState containing the current state details
+ */
 export function useWallet(publicKey?: string): WalletState {
   const [state, setState] = useState<WalletState>({
     address: publicKey || null,

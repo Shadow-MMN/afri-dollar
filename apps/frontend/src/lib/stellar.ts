@@ -7,6 +7,12 @@ export interface StellarAccount {
   }>;
 }
 
+/**
+ * Loads a Stellar account from Horizon by public key.
+ *
+ * @param publicKey Stellar account public key address string
+ * @returns Promise resolving to the StellarAccount object with balances array
+ */
 export const loadStellarAccount = async (publicKey: string): Promise<StellarAccount> => {
   const horizonUrl =
     process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';

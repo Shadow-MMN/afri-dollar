@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * DashboardPage renders the main client management portal overview.
+ * It displays wallets, balances, active batches, and rate conversions.
+ */
 export default function DashboardPage(): JSX.Element {
   return (
     <div className="p-8">

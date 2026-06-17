@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: 'Stellar-powered financial infrastructure platform for African businesses',
 };
 
+/**
+ * RootLayout component wraps all pages in the Next.js application.
+ * It provides the global HTML structure and imports global styles.
+ */
 export default function RootLayout({ children }: { children: ReactNode }): JSX.Element {
   return (
     <html lang="en">

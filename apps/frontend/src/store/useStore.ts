@@ -19,6 +19,12 @@ interface UseStoreResult {
   setWallet: (address: string | null, balance: number) => void;
 }
 
+/**
+ * Custom hook providing a minimal global state store (alternative to Zustand).
+ * It manages wallet address and USDC balance with synchronized listeners.
+ *
+ * @returns Object containing the current store state and setWallet action
+ */
 export function useStore(): UseStoreResult {
   const [state, setState] = useState<GlobalState>(globalState);
 
@@ -30,6 +36,12 @@ export function useStore(): UseStoreResult {
     };
   }, []);
 
+  /**
+   * Updates the global wallet address and balance, and notifies all active listeners.
+   *
+   * @param address Stellar public key or null to clear/logout
+   * @param balance Current USDC balance of the account
+   */
   const setWallet = (address: string | null, balance: number): void => {
     globalState = { ...globalState, walletAddress: address, balance };
     listeners.forEach((l) => l(globalState));

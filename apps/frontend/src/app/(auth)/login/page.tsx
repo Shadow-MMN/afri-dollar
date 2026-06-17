@@ -6,6 +6,11 @@ import React, { useState } from 'react';
 import { setAuthToken } from '../../../lib/auth';
 import { useStore } from '../../../store/useStore';
 
+/**
+ * LoginPage renders the user sign-in screen.
+ * It provides email and password inputs, error validation feedback,
+ * and handles mock authentication with redirecting to dashboard.
+ */
 export default function LoginPage(): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +19,14 @@ export default function LoginPage(): JSX.Element {
   const router = useRouter();
   const { setWallet } = useStore();
 
+  /**
+   * Handles sign-in form submission.
+   * Performs basic validation, triggers a mock network delay,
+   * stores authentication token, updates local store state,
+   * and redirects user to dashboard.
+   *
+   * @param e React form submission event
+   */
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     setLoading(true);
