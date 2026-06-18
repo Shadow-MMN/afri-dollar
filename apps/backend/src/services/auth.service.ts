@@ -4,13 +4,20 @@
  */
 import { createHash } from 'crypto';
 
-import type { User } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { User, Prisma } from '@prisma/client';
+import { hash, compare } from 'bcrypt';
 import { addDays } from 'date-fns';
-import jwt from 'jsonwebtoken';
+import { sign, verify } from 'jsonwebtoken';
 
 import prisma from '../config/database';
-import type { AuthTokens, RegisterRequest, LoginRequest, JwtPayload } from '../types';
+import { AppError } from '../types';
+import type {
+  AuthTokens,
+  RegisterRequest,
+  LoginRequest,
+  JwtPayload,
+  TokenRefreshData,
+} from '../types';
 
 const SALT_ROUNDS = 10;
 const ACCESS_TOKEN_EXPIRY = '15m';
@@ -21,10 +28,10 @@ const REFRESH_TOKEN_EXPIRY_DAYS = 7;
  */
 function validateJwtSecrets(): void {
   if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required');
+    throw new AppError(500, 'Server configuration error');
   }
   if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    throw new AppError(500, 'Server configuration error');
   }
 }
 
@@ -33,14 +40,14 @@ export const AuthService = {
    * Hash a password using bcrypt
    */
   async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, SALT_ROUNDS);
+    return hash(password, SALT_ROUNDS);
   },
 
   /**
    * Verify a password against a hash
    */
-  async verifyPassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
+  async verifyPassword(password: string, hashStr: string): Promise<boolean> {
+    return compare(password, hashStr);
   },
 
   /**
@@ -55,7 +62,7 @@ export const AuthService = {
    */
   generateAccessToken(payload: JwtPayload): string {
     validateJwtSecrets();
-    return jwt.sign(payload, process.env.JWT_SECRET!, {
+    return sign(payload, process.env.JWT_SECRET!, {
       expiresIn: ACCESS_TOKEN_EXPIRY,
     });
   },
@@ -65,7 +72,7 @@ export const AuthService = {
    */
   generateRefreshToken(payload: JwtPayload): string {
     validateJwtSecrets();
-    return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
+    return sign(payload, process.env.JWT_REFRESH_SECRET!, {
       expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d`,
     });
   },
@@ -75,7 +82,11 @@ export const AuthService = {
    */
   verifyAccessToken(token: string): JwtPayload {
     validateJwtSecrets();
-    return jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    try {
+      return verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    } catch {
+      throw new AppError(401, 'Invalid or expired access token');
+    }
   },
 
   /**
@@ -83,7 +94,11 @@ export const AuthService = {
    */
   verifyRefreshToken(token: string): JwtPayload {
     validateJwtSecrets();
-    return jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as JwtPayload;
+    try {
+      return verify(token, process.env.JWT_REFRESH_SECRET!) as JwtPayload;
+    } catch {
+      throw new AppError(401, 'Invalid refresh token');
+    }
   },
 
   /**
@@ -98,7 +113,7 @@ export const AuthService = {
     });
 
     if (existingUser) {
-      throw new Error('User with this email already exists');
+      throw new AppError(400, 'Email already registered');
     }
 
     // Check if phone number already exists
@@ -108,7 +123,7 @@ export const AuthService = {
       });
 
       if (existingPhone) {
-        throw new Error('User with this phone number already exists');
+        throw new AppError(400, 'Phone number already registered');
       }
     }
 
@@ -166,22 +181,21 @@ export const AuthService = {
     });
 
     if (!user || !user.passwordHash) {
-      throw new Error('Invalid email or password');
+      throw new AppError(401, 'Invalid credentials');
     }
 
     // Verify password
     const isPasswordValid = await this.verifyPassword(data.password, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new Error('Invalid email or password');
+      throw new AppError(401, 'Invalid credentials');
     }
 
     // Check if user is active
     if (!user.isActive) {
-      throw new Error('User account is inactive');
+      throw new AppError(403, 'Account is inactive');
     }
 
-    // Generate tokens
     const jwtPayload: JwtPayload = {
       userId: user.id,
       email: user.email,
@@ -210,12 +224,9 @@ export const AuthService = {
   },
 
   /**
-   * Refresh access token with token rotation
+   * Refresh access token with token rotation and active breach defense
    */
-  async refreshAccessToken(
-    refreshToken: string
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    // Verify refresh token
+  async refreshAccessToken(refreshToken: string): Promise<TokenRefreshData> {
     const payload = this.verifyRefreshToken(refreshToken);
 
     // Hash the token to check in database
@@ -227,21 +238,25 @@ export const AuthService = {
       include: { user: true },
     });
 
-    if (!tokenRecord) {
-      throw new Error('Invalid refresh token');
+    if (tokenRecord && tokenRecord.isRevoked) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: tokenRecord.userId },
+        data: { isRevoked: true, revokedAt: new Date() },
+      });
+      throw new AppError(401, 'Refresh token has been revoked');
     }
 
-    if (tokenRecord.isRevoked) {
-      throw new Error('Refresh token has been revoked');
+    if (!tokenRecord) {
+      throw new AppError(401, 'Invalid refresh token');
     }
 
     if (tokenRecord.expiresAt < new Date()) {
-      throw new Error('Refresh token has expired');
+      throw new AppError(401, 'Refresh token has expired');
     }
 
     // Check if user is active
     if (!tokenRecord.user.isActive) {
-      throw new Error('User account is inactive');
+      throw new AppError(403, 'Account is inactive');
     }
 
     // Revoke old refresh token
@@ -271,7 +286,7 @@ export const AuthService = {
       },
     });
 
-    return { accessToken, refreshToken: newRefreshToken };
+    return { accessToken, refreshToken: newRefreshToken, userId: tokenRecord.userId };
   },
 
   /**
@@ -289,7 +304,7 @@ export const AuthService = {
     if (tokenRecord) {
       // Verify the token belongs to the user making the request
       if (tokenRecord.userId !== userId) {
-        throw new Error('Refresh token does not belong to this user');
+        throw new AppError(401, 'Invalid refresh token');
       }
 
       await prisma.refreshToken.update({
@@ -311,7 +326,7 @@ export const AuthService = {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new AppError(404, 'User not found');
     }
 
     // Remove passwordHash from user object before returning
@@ -324,20 +339,9 @@ export const AuthService = {
   /**
    * Create audit log entry
    */
-  async createAuditLog(data: {
-    userId?: string;
-    action: string;
-    resource: string;
-    resourceId?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    metadata?: Record<string, unknown>;
-    success?: boolean;
-  }): Promise<void> {
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
+  async createAuditLog(data: Prisma.AuditLogCreateInput): Promise<void> {
     await prisma.auditLog.create({
-      data: data as any,
+      data,
     });
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
   },
 };
