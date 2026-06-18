@@ -1,7 +1,7 @@
 import { SelectHTMLAttributes, forwardRef, useId } from 'react';
 
 export interface SelectOption {
-  value: string | number;
+  value: string;
   label: string;
   disabled?: boolean;
 }
@@ -43,6 +43,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       disabled,
       required,
       id: customId,
+      'aria-describedby': ariaDescribedBy,
       ...props
     },
     ref
@@ -60,6 +61,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectVariantClass = error
       ? 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-600'
       : 'border-slate-300 dark:border-slate-700 focus:border-primary-500 focus:ring-primary-500';
+
+    const internalDescribedBy = error ? errorId : helperText ? helperId : undefined;
+    const describedBy =
+      [ariaDescribedBy, internalDescribedBy].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className={wrapperClass}>
@@ -84,7 +89,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             disabled={disabled}
             required={required}
             aria-invalid={error ? 'true' : 'false'}
-            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            aria-describedby={describedBy}
             className={`${selectBaseClass} ${selectVariantClass} ${className}`}
             {...props}
           >

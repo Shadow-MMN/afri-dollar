@@ -6,12 +6,12 @@ Welcome to the AfriDollar Frontend UI Component Library. This folder contains a 
 
 All reusable components are located in the `ui` folder:
 
-- [Button](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/button.tsx) - Standard buttons for CTAs with sizes, variants, loading state, and icons.
-- [Input](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/input.tsx) - Accessible text inputs with labels, errors, helper text, and left/right adornments.
-- [Select](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/select.tsx) - Styled custom selection dropdown wrapping native HTML selects.
-- [Modal](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/modal.tsx) - Accessible dialog modal utilizing React Portal, ESC-key exit, and focus trapping.
-- [Card](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/card.tsx) - Structural card container with headers, title, body, and footer components.
-- [Avatar](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/avatar.tsx) - Profile image with loading skeleton and initials gradient fallback.
+- [Button](./ui/button.tsx) - Standard buttons for CTAs with sizes, variants, loading state, and icons.
+- [Input](./ui/input.tsx) - Accessible text inputs with labels, errors, helper text, and left/right adornments.
+- [Select](./ui/select.tsx) - Styled custom selection dropdown wrapping native HTML selects.
+- [Modal](./ui/modal.tsx) - Accessible dialog modal utilizing React Portal, ESC-key exit, and focus trapping.
+- [Card](./ui/card.tsx) - Structural card container with headers, title, body, and footer components.
+- [Avatar](./ui/avatar.tsx) - Profile image with loading skeleton and initials gradient fallback.
 
 ---
 
@@ -151,14 +151,17 @@ export function ConfirmPaymentModal() {
 
 #### Props
 
-| Prop                  | Type                                     | Default     | Description                                                 |
-| :-------------------- | :--------------------------------------- | :---------- | :---------------------------------------------------------- |
-| `isOpen`              | `boolean`                                | required    | Sets modal visibility state.                                |
-| `onClose`             | `() => void`                             | required    | Callback triggered on escape key or backdrop overlay click. |
-| `size`                | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'` | `'md'`      | Max width size of the dialog.                               |
-| `closeOnOverlayClick` | `boolean`                                | `true`      | Enables closing the modal by clicking outside.              |
-| `closeOnEsc`          | `boolean`                                | `true`      | Enables closing by pressing the Escape key.                 |
-| `ariaLabelledBy`      | `string`                                 | `undefined` | Associated title element ID for ARIA compliance.            |
+| Prop                  | Type                                     | Default     | Description                                                                        |
+| :-------------------- | :--------------------------------------- | :---------- | :--------------------------------------------------------------------------------- |
+| `isOpen`              | `boolean`                                | required    | Sets modal visibility state.                                                       |
+| `onClose`             | `() => void`                             | required    | Callback triggered on escape key or backdrop overlay click.                        |
+| `size`                | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'` | `'md'`      | Max width size of the dialog.                                                      |
+| `closeOnOverlayClick` | `boolean`                                | `true`      | Enables closing the modal by clicking outside.                                     |
+| `closeOnEsc`          | `boolean`                                | `true`      | Enables closing by pressing the Escape key.                                        |
+| `children`            | `ReactNode`                              | required    | Modal content (typically `ModalHeader`, `ModalBody`, `ModalFooter` subcomponents). |
+| `ariaLabelledBy`      | `string`                                 | `undefined` | Associated title element ID for ARIA compliance.                                   |
+| `ariaLabel`           | `string`                                 | `undefined` | Fallback accessible name when `ariaLabelledBy` is not provided.                    |
+| `className`           | `string`                                 | `undefined` | Additional CSS classes to apply to the modal container.                            |
 
 ---
 

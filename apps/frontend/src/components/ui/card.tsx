@@ -68,7 +68,7 @@ export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElem
     return (
       <div
         ref={ref}
-        className={`p-6 pt-0 text-slate-700 dark:text-slate-350 text-sm md:text-base ${className}`}
+        className={`p-6 pt-0 text-slate-700 dark:text-slate-400 text-sm md:text-base ${className}`}
         {...props}
       >
         {children}

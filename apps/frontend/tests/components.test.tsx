@@ -246,7 +246,7 @@ describe('UI Component Library Tests', () => {
       expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('JD');
     });
 
-    it('handles image load and errors', () => {
+    it('shows skeleton while loading and removes it on successful load', () => {
       render(<Avatar src="test.jpg" name="John Doe" />);
       // Image starts loading, showing skeleton
       expect(screen.getByTestId('avatar-skeleton')).toBeInTheDocument();
@@ -254,11 +254,17 @@ describe('UI Component Library Tests', () => {
       const image = screen.getByRole('img');
       expect(image).toBeInTheDocument();
 
-      // Simulate load
+      // Simulate successful load — skeleton should disappear
       fireEvent.load(image);
       expect(screen.queryByTestId('avatar-skeleton')).not.toBeInTheDocument();
+    });
 
-      // Simulate error
+    it('shows fallback initials on image error', () => {
+      render(<Avatar src="invalid.jpg" name="John Doe" />);
+      expect(screen.getByTestId('avatar-skeleton')).toBeInTheDocument();
+
+      const image = screen.getByRole('img');
+      // Simulate load error — fallback initials should appear
       fireEvent.error(image);
       expect(screen.getByTestId('avatar-fallback')).toHaveTextContent('JD');
     });

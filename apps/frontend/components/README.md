@@ -4,19 +4,19 @@ Welcome to the AfriDollar Frontend UI Component Library. This directory has been
 
 For detailed API and usage documentation, please refer to the primary README:
 
-- [src/components/README.md](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/README.md)
+- [src/components/README.md](../src/components/README.md)
 
 ## Core Component Directory
 
 All reusable components are located in:
 
-- [Button](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/button.tsx)
-- [Input](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/input.tsx)
-- [Select](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/select.tsx)
-- [Modal](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/modal.tsx)
-- [Card](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/card.tsx)
-- [Avatar](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/ui/avatar.tsx)
+- [Button](../src/components/ui/button.tsx)
+- [Input](../src/components/ui/input.tsx)
+- [Select](../src/components/ui/select.tsx)
+- [Modal](../src/components/ui/modal.tsx)
+- [Card](../src/components/ui/card.tsx)
+- [Avatar](../src/components/ui/avatar.tsx)
 
 ## Component Usage & API Documentation
 
-For examples, props, and detailed configurations, see the main [README](file:///c:/Users/USER/Desktop/afri-dollar/apps/frontend/src/components/README.md).
+For examples, props, and detailed configurations, see the main [README](../src/components/README.md).

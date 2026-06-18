@@ -22,6 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       disabled,
       required,
       id: customId,
+      'aria-describedby': ariaDescribedBy,
       ...props
     },
     ref
@@ -41,6 +42,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:border-primary-500 focus:ring-primary-500';
 
     const paddingClass = `${leftAdornment ? 'pl-10' : 'pl-3.5'} ${rightAdornment ? 'pr-10' : 'pr-3.5'} py-2`;
+
+    const internalDescribedBy = error ? errorId : helperText ? helperId : undefined;
+    const describedBy =
+      [ariaDescribedBy, internalDescribedBy].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className={wrapperClass}>
@@ -71,13 +76,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             disabled={disabled}
             required={required}
             aria-invalid={error ? 'true' : 'false'}
-            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            aria-describedby={describedBy}
             className={`${inputBaseClass} ${inputVariantClass} ${paddingClass} ${className}`}
             {...props}
           />
 
           {rightAdornment && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 dark:text-slate-400">
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
               {rightAdornment}
             </div>
           )}

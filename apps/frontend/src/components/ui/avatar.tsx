@@ -1,4 +1,4 @@
-import { ImgHTMLAttributes, useEffect, useState } from 'react';
+import { ImgHTMLAttributes, SyntheticEvent, useEffect, useState } from 'react';
 
 export interface AvatarProps extends ImgHTMLAttributes<HTMLImageElement> {
   name?: string;
@@ -22,7 +22,9 @@ export function Avatar({
   size = 'md',
   fallbackBg,
   className = '',
-  ...props
+  onLoad: consumerOnLoad,
+  onError: consumerOnError,
+  ...imgProps
 }: AvatarProps): JSX.Element {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(!!src);
@@ -42,6 +44,7 @@ export function Avatar({
 
   const initials = getInitials(name);
   const showFallback = !src || hasError;
+  const accessibleLabel = alt || name || 'Avatar';
 
   // Curated premium background gradients for fallbacks based on name length
   const defaultBgGradient = () => {
@@ -59,37 +62,49 @@ export function Avatar({
 
   const bgStyle = fallbackBg || defaultBgGradient();
 
+  const handleLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    consumerOnLoad?.(e);
+    setIsLoading(false);
+  };
+
+  const handleError = (e: SyntheticEvent<HTMLImageElement>) => {
+    consumerOnError?.(e);
+    setHasError(true);
+    setIsLoading(false);
+  };
+
   return (
     <div
       className={`relative inline-flex items-center justify-center rounded-full overflow-hidden select-none font-medium ${sizeClasses[size]} ${
         showFallback ? bgStyle : 'bg-slate-100 dark:bg-slate-800'
       } ${className}`}
       data-testid="avatar-container"
+      role={showFallback ? 'img' : undefined}
+      aria-label={showFallback ? accessibleLabel : undefined}
     >
       {src && !hasError && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt || name || 'Avatar'}
-          onLoad={() => setIsLoading(false)}
-          onError={() => {
-            setHasError(true);
-            setIsLoading(false);
-          }}
+          {...imgProps}
+          onLoad={handleLoad}
+          onError={handleError}
           className={`h-full w-full object-cover transition-opacity duration-200 ${
             isLoading ? 'opacity-0' : 'opacity-100'
           }`}
-          {...props}
         />
       )}
 
       {showFallback && (
-        <span className="uppercase" data-testid="avatar-fallback">
+        <span className="uppercase" data-testid="avatar-fallback" aria-hidden="true">
           {initials || (
             <svg
-              className="h-2/3 w-2/3 text-slate-350 dark:text-slate-500"
+              className="h-2/3 w-2/3 text-slate-400 dark:text-slate-500"
               fill="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
             >
               <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>

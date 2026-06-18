@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface ModalProps {
@@ -10,6 +10,7 @@ export interface ModalProps {
   children: ReactNode;
   className?: string;
   ariaLabelledBy?: string;
+  ariaLabel?: string;
 }
 
 export function ModalHeader({
@@ -53,7 +54,7 @@ export function ModalBody({
 }): JSX.Element {
   return (
     <div
-      className={`px-6 py-4 text-slate-600 dark:text-slate-350 text-sm md:text-base ${className}`}
+      className={`px-6 py-4 text-slate-600 dark:text-slate-400 text-sm md:text-base ${className}`}
     >
       {children}
     </div>
@@ -85,19 +86,27 @@ export function Modal({
   children,
   className = '',
   ariaLabelledBy,
+  ariaLabel,
 }: ModalProps): JSX.Element | null {
   const [mounted, setMounted] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
 
-  // Lock scroll
+  // Memoize modal root to avoid repeated DOM queries on every render
+  const modalRoot = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    return document.getElementById('modal-root') || document.body;
+  }, []);
+
+  // Lock scroll — save/restore only the inline style value, not computed style
   useEffect(() => {
     if (!isOpen) return;
-    const originalStyle = window.getComputedStyle(document.body).overflow;
+    const originalStyle = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = originalStyle;
@@ -119,20 +128,26 @@ export function Modal({
     };
   }, [isOpen, closeOnEsc, onClose]);
 
-  // Focus trap
+  // Focus trap + restore focus on close
   useEffect(() => {
     if (!isOpen) return;
+
+    // Save the element that had focus before the modal opened
+    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
+
     const modalEl = modalRef.current;
     if (!modalEl) return;
 
     const focusableSelector =
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-    // Focus on first focusable element
+    // Focus on first focusable element, or the modal container as fallback
     const timeoutId = setTimeout(() => {
       const focusableElements = modalEl.querySelectorAll(focusableSelector);
       if (focusableElements.length > 0) {
         (focusableElements[0] as HTMLElement).focus();
+      } else {
+        modalEl.focus();
       }
     }, 50);
 
@@ -165,6 +180,9 @@ export function Modal({
     return () => {
       clearTimeout(timeoutId);
       document.removeEventListener('keydown', handleFocusTrap);
+      // Restore focus to the element that was active before the modal opened
+      previousActiveElementRef.current?.focus();
+      previousActiveElementRef.current = null;
     };
   }, [isOpen]);
 
@@ -184,7 +202,7 @@ export function Modal({
     }
   };
 
-  const modalRoot = document.getElementById('modal-root') || document.body;
+  if (!modalRoot) return null;
 
   return createPortal(
     <div
@@ -197,6 +215,8 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}
+        aria-label={!ariaLabelledBy ? ariaLabel : undefined}
+        tabIndex={-1}
         className={`w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg shadow-xl flex flex-col scale-95 transition-transform duration-300 ease-out max-h-[90vh] overflow-y-auto ${sizeClasses[size]} ${className}`}
         data-testid="modal-container"
       >
