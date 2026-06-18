@@ -71,3 +71,83 @@ export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunct
 
   next();
 };
+
+/**
+ * Role-based access control middleware
+ * Checks if the authenticated user has one of the required roles
+ * Must run after `authMiddleware` so that `req.user` has been populated
+ * @param roles - Array of allowed roles
+ */
+export const requireRole = (...roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Access token is required',
+      });
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+/**
+ * Permission-based access control middleware
+ * Checks if the authenticated user has the required permission
+ * Must run after `authMiddleware` so that `req.user` has been populated
+ * @param permission - The permission string to check
+ */
+export const requirePermission = (permission: string) => {
+  // Define role permissions
+  const rolePermissions: Record<string, string[]> = {
+    ADMIN: ['*'], // Full access
+    BUSINESS: [
+      'wallet:read',
+      'wallet:write',
+      'transaction:read',
+      'transaction:write',
+      'payroll:read',
+      'payroll:write',
+    ],
+    USER: ['wallet:read', 'transaction:read'],
+    AUDITOR: ['wallet:read', 'transaction:read', 'audit:read'],
+  };
+
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Access token is required',
+      });
+      return;
+    }
+
+    const userPermissions = rolePermissions[req.user.role] || [];
+
+    // Admin has full access
+    if (req.user.role === 'ADMIN') {
+      next();
+      return;
+    }
+
+    // Check if user has the required permission
+    if (!userPermissions.includes(permission)) {
+      res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+      return;
+    }
+
+    next();
+  };
+};

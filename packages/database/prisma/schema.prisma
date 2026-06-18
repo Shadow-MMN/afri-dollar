@@ -12,7 +12,9 @@ datasource db {
 
 enum UserRole {
   USER
+  BUSINESS
   ADMIN
+  AUDITOR
 }
 
 // User model for authentication and authorization

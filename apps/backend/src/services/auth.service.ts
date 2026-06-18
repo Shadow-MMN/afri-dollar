@@ -141,11 +141,11 @@ export const AuthService = {
       },
     });
 
-    // Generate tokens (Using runtime type assertion fallback)
+    // Generate tokens
     const jwtPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
       userId: user.id,
       email: user.email,
-      role: (user as any).role || 'USER',
+      role: user.role,
     };
 
     const accessToken = this.generateAccessToken(jwtPayload);
@@ -197,11 +197,11 @@ export const AuthService = {
       throw new AppError(403, 'Account is inactive');
     }
 
-    // Fixed: Added safe runtime mapping fallback to match JwtPayload specifications
+    // Generate tokens
     const jwtPayload: JwtPayload = {
       userId: user.id,
       email: user.email,
-      role: (user as any).role || 'USER',
+      role: user.role,
     };
 
     const accessToken = this.generateAccessToken(jwtPayload);
