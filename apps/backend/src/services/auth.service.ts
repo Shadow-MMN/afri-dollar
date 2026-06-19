@@ -235,11 +235,7 @@ export const AuthService = {
    * Revoke a single refresh token (device logout).
    * If revokeAllDevices is true, all tokens for the user are revoked.
    */
-  async logout(
-    refreshToken: string,
-    userId: string,
-    revokeAllDevices = false
-  ): Promise<void> {
+  async logout(refreshToken: string, userId: string, revokeAllDevices = false): Promise<void> {
     const tokenHash = this.hashRefreshToken(refreshToken);
 
     const tokenRecord = await prisma.refreshToken.findUnique({
