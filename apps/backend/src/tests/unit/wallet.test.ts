@@ -186,7 +186,7 @@ describe('WalletService', () => {
           walletType: 'payroll',
           network: 'testnet',
         })
-      ).rejects.toThrow('Friendbot funding request timed out');
+      ).rejects.toMatchObject({ status: 504, message: 'Friendbot funding request timed out' });
 
       expect(mockWalletCreate).not.toHaveBeenCalled();
     });
@@ -204,7 +204,10 @@ describe('WalletService', () => {
           walletType: 'payroll',
           network: 'testnet',
         })
-      ).rejects.toThrow('Friendbot funding failed: network error');
+      ).rejects.toMatchObject({
+        status: 503,
+        message: 'Friendbot funding failed: network error',
+      });
 
       expect(mockWalletCreate).not.toHaveBeenCalled();
     });
@@ -222,7 +225,10 @@ describe('WalletService', () => {
           walletType: 'payroll',
           network: 'testnet',
         })
-      ).rejects.toThrow('Friendbot funding failed: Error: Something unexpected');
+      ).rejects.toMatchObject({
+        status: 502,
+        message: 'Friendbot funding failed: Error: Something unexpected',
+      });
 
       expect(mockWalletCreate).not.toHaveBeenCalled();
     });
