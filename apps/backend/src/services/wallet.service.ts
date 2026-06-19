@@ -6,13 +6,28 @@ import type { CreateWalletOptions, WalletWithKeys } from '../types';
 import { encrypt } from '../utils/crypto';
 
 const FRIENDBOT_URL = 'https://friendbot.stellar.org';
+const FRIENDBOT_TIMEOUT_MS = 30_000;
 
 async function fundTestnetAccount(publicKey: string): Promise<void> {
-  const response = await fetch(`${FRIENDBOT_URL}?addr=${publicKey}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FRIENDBOT_TIMEOUT_MS);
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new AppError(502, `Friendbot funding failed: ${response.status} ${body}`);
+  try {
+    const response = await fetch(`${FRIENDBOT_URL}?addr=${publicKey}`, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new AppError(502, `Friendbot funding failed: ${response.status} ${body}`);
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(504, 'Friendbot funding timed out');
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -32,6 +47,10 @@ export const WalletService = {
 
     const secretKeyEncrypted = encrypt(secretKey);
 
+    if (options.network === 'testnet') {
+      await fundTestnetAccount(publicKey);
+    }
+
     const wallet = await prisma.wallet.create({
       data: {
         userId: options.userId,
@@ -41,10 +60,6 @@ export const WalletService = {
         network: options.network,
       },
     });
-
-    if (options.network === 'testnet') {
-      await fundTestnetAccount(publicKey);
-    }
 
     return {
       id: wallet.id,

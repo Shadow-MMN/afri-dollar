@@ -96,7 +96,8 @@ describe('WalletService', () => {
         },
       });
       expect(global.fetch).toHaveBeenCalledWith(
-        `https://friendbot.stellar.org?addr=${mockPublicKey}`
+        `https://friendbot.stellar.org?addr=${mockPublicKey}`,
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result).toEqual({
         id: 'wallet-1',
@@ -153,10 +154,6 @@ describe('WalletService', () => {
         id: 'user-1',
         email: 'test@example.com',
       });
-      mockWalletCreate.mockResolvedValue({
-        id: 'wallet-1',
-        publicKey: mockPublicKey,
-      });
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 503,
@@ -170,38 +167,8 @@ describe('WalletService', () => {
           network: 'testnet',
         })
       ).rejects.toThrow('Friendbot funding failed');
-    });
 
-    it('should accept default network as testnet', async () => {
-      mockUserFindUnique.mockResolvedValue({
-        id: 'user-1',
-        email: 'test@example.com',
-      });
-      mockWalletCreate.mockResolvedValue({
-        id: 'wallet-1',
-        publicKey: mockPublicKey,
-        secretKeyEncrypted: 'encrypted:secret:key',
-        userId: 'user-1',
-        walletType: 'payroll',
-        network: 'testnet',
-      });
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-      });
-
-      const result = await WalletService.createWallet({
-        userId: 'user-1',
-        walletType: 'payroll',
-        network: 'testnet',
-      });
-
-      expect(mockWalletCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          network: 'testnet',
-          walletType: 'payroll',
-        }),
-      });
-      expect(result.secretKey).toBe(mockSecretKey);
+      expect(mockWalletCreate).not.toHaveBeenCalled();
     });
   });
 });
