@@ -24,10 +24,6 @@ jest.mock('@stellar/stellar-sdk', () => {
   };
 });
 
-const _mockLoadAccount = (global as Record<string, unknown>).__mockLoadAccount as jest.Mock;
-const _mockSubmitTransaction = (global as Record<string, unknown>)
-  .__mockSubmitTransaction as jest.Mock;
-
 jest.mock('../../config/database', () => ({
   __esModule: true,
   default: {
